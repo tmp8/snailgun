@@ -3,10 +3,10 @@ Gem::Specification.new do |s|
   s.version = "1.2.0"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
-  s.authors = ["Brian Candler", "Sebastian Korfmann <sebastian@tmp8.de>", "Thies C. Arntzen <thies@tmp8.de>"]
+  s.authors = ["Brian Candler", "Sebastian Korfmann", "Thies C. Arntzen"]
   s.date = %q{2010-12-01}
   s.description = %q{Snailgun accelerates the startup of Ruby applications which require large numbers of libraries}
-  s.email = %q{b.candler@pobox.com}
+  s.email = ["b.candler@pobox.com", "dev@tmp8.de"]
   s.files = [
     "bin/fautotest", "bin/fconsole", "bin/fcucumber", "bin/frake", "bin/fruby", "bin/snailgun", "bin/snailgun_ruby",
     "lib/snailgun/server.rb", "lib/snailgun/require_timings.rb", "lib/snailgun/client.rb","lib/snailgun/require_preload.rb", "README.markdown", "README-snowleopard", "ruby-1.9.2-p0.patch"
