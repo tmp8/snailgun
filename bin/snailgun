@@ -82,19 +82,13 @@ when :rails
       server = Snailgun::Server.new("#{sockdir}/#{env}")
       ENV['RAILS_ENV'] = env
       load conf
-      if File.exist?('./config/environment.rb')
-        require './config/environment.rb'
+
+      if File.exist?('./.snailgun.preload')
+        require 'snailgun/require_preload'
+      else
+        puts "please create a .snailgun.preload by ..."
       end
-      # We can get some drastic test speedups by preloading test frameworks
-      # (although user could do that in config/environments/test.rb)
-      if env != 'test'
-        # do nothing
-      elsif File.exist?('./test/test_helper.rb')
-        require './test/test_helper'
-      elsif File.exist?('spec/spec_helper.rb')
-        require 'spec'
-        require 'spec/rails'
-      end
+
       if Rails.respond_to?(:configuration) && Rails.configuration.cache_classes
         STDERR.puts <<-EOS
 WARNING: Snailgun doesn't work well with `cache_classes`. Strongly recommend
