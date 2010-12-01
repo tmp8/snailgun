@@ -35,7 +35,11 @@ module Snailgun
             nbytes = client.read(4).unpack("N").first
             args, env, cwd, pgid = Marshal.load(client.read(nbytes))
             Dir.chdir(cwd)
-            $LOAD_PATH.unshift rubylib if (rubylib = env['RUBYLIB'])
+            if rubylib = env['RUBYLIB']
+              rubylib.split(/:/).each do |path| 
+                $LOAD_PATH.unshift path
+              end
+            end
             begin
               Process.setpgid(0, pgid)
             rescue Errno::EPERM
@@ -76,7 +80,9 @@ module Snailgun
           e << v
         end
         opts.on("-I DIR") do |v|
-          $:.unshift v
+          v.split(/:/).each do |path|
+            $:.unshift path
+          end
         end
         opts.on("-r LIB") do |v|
           require v
