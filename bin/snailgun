@@ -78,6 +78,8 @@ when :rails
   start_for_envs = envs.split(/[\s,]+/).uniq
   start_for_envs.each do |env|
     pids[env] = fork do
+      ENV['SNAILGUN'] = $$.to_s
+      
       STDERR.puts "Server starting for RAILS_ENV=#{env}"
       server = Snailgun::Server.new("#{sockdir}/#{env}")
       ENV['RAILS_ENV'] = env
