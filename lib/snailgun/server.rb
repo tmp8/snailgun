@@ -87,6 +87,9 @@ module Snailgun
         opts.on("-r LIB") do |v|
           require v
         end
+        opts.on("--dump_requires") do |v|
+          require File.dirname(__FILE__) + "/require_timings.rb"
+        end
         opts.on("-KU") do |v|
           $KCODE = 'u' if RUBY_VERSION < "1.9"
         end
