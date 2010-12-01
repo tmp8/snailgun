@@ -1,17 +1,17 @@
 Gem::Specification.new do |s|
   s.name = %q{snailgun}
-  s.version = "1.1.1"
+  s.version = "1.2.0"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
-  s.authors = ["Brian Candler"]
-  s.date = %q{2010-10-24}
+  s.authors = ["Brian Candler", "Sebastian Korfmann <sebastian@tmp8.de>", "Thies C. Arntzen <thies@tmp8.de>"]
+  s.date = %q{2010-12-01}
   s.description = %q{Snailgun accelerates the startup of Ruby applications which require large numbers of libraries}
   s.email = %q{b.candler@pobox.com}
   s.files = [
-    "bin/fautotest", "bin/fconsole", "bin/fcucumber", "bin/frake", "bin/fruby", "bin/snailgun",
-    "lib/snailgun/server.rb", "README.markdown", "README-snowleopard", "ruby-1.9.2-p0.patch", "textmate.patch", "README-textmate"
+    "bin/fautotest", "bin/fconsole", "bin/fcucumber", "bin/frake", "bin/fruby", "bin/snailgun", "bin/snailgun_ruby",
+    "lib/snailgun/server.rb", "lib/snailgun/require_timings.rb", "lib/snailgun/require_preload.rb", "README.markdown", "README-snowleopard", "ruby-1.9.2-p0.patch"
   ]
-  s.executables = ["fautotest", "fconsole", "fcucumber", "frake", "fruby", "snailgun"]
+  s.executables = ["fautotest", "fconsole", "fcucumber", "frake", "fruby", "snailgun", "snailgun_ruby"]
   s.extra_rdoc_files = ["README.markdown"]
   s.has_rdoc = true
   s.homepage = %q{http://github.com/candlerb/snailgun}
