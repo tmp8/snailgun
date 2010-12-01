@@ -9,7 +9,7 @@ Gem::Specification.new do |s|
   s.email = %q{b.candler@pobox.com}
   s.files = [
     "bin/fautotest", "bin/fconsole", "bin/fcucumber", "bin/frake", "bin/fruby", "bin/snailgun", "bin/snailgun_ruby",
-    "lib/snailgun/server.rb", "lib/snailgun/require_timings.rb", "lib/snailgun/require_preload.rb", "README.markdown", "README-snowleopard", "ruby-1.9.2-p0.patch"
+    "lib/snailgun/server.rb", "lib/snailgun/require_timings.rb", "lib/snailgun/client.rb","lib/snailgun/require_preload.rb", "README.markdown", "README-snowleopard", "ruby-1.9.2-p0.patch"
   ]
   s.executables = ["fautotest", "fconsole", "fcucumber", "frake", "fruby", "snailgun", "snailgun_ruby"]
   s.extra_rdoc_files = ["README.markdown"]
