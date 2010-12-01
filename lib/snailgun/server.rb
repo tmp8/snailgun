@@ -87,8 +87,6 @@ module Snailgun
         opts.on("-r LIB") do |v|
           require v
         end
-        # opts.on("-rcatch_exception") do |v|
-        # end
         opts.on("-KU") do |v|
           $KCODE = 'u' if RUBY_VERSION < "1.9"
         end
