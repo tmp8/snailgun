@@ -2,7 +2,8 @@
 # Copyright (C) Brian Candler 2009. Released under the Ruby licence.
 # This could be rewritten in C for even faster startup
 
-require 'socket'
+require 'lib/snailgun/client'
+
 if ENV['SNAILGUN_SOCK']
   sockname = ENV['SNAILGUN_SOCK']
 elsif File.directory?('tmp/sockets/snailgun')
@@ -24,17 +25,4 @@ EOS
   exit 1
 end
 
-server = UNIXSocket.open(sockname)
-server.send_io(STDIN)
-server.send_io(STDOUT)
-server.send_io(STDERR)
-args = Marshal.dump([ARGV, ENV.to_hash, Dir.pwd, Process.getpgrp])
-server.write [args.size].pack("N")
-server.write args
-begin
-  rc = (server.read(1) || "\000").unpack("C").first
-  exit rc
-rescue Interrupt
-  server.write('X')
-  exit 1
-end
+Snailgun::Client.new(sockname)

@@ -1,0 +1,45 @@
+#!/usr/bin/env ruby
+$:.unshift File.expand_path(File.join(File.dirname(__FILE__), "..", "lib"))
+require 'snailgun/client'
+
+def rvm_env(path)
+  if File.exist?(file = "#{path}/.rvmrc")
+    ruby, gemset = IO.read(file).strip.split(" ").last.split("@")
+    Dir["#{ENV['rvm_path']}/environments/*#{ruby}*@#{gemset}"].first
+  elsif path != "/"
+    rvm_env(File.expand_path("#{path}/../"))
+  end
+end
+
+def snailgun_socket(path)
+  if File.socket?(socket = "#{path}/tmp/sockets/snailgun/test")
+    socket
+  elsif path != "/"
+    snailgun_socket(File.expand_path("#{path}/../"))
+  end
+end
+
+def skip_snailgun?
+  ARGV.size == 1 && ARGV[0] =~ /^\/tmp\/cucumber/
+end
+
+def log(msg)
+  File.open("/tmp/snailgun_ruby.log", "a+") { |f| f.puts msg }
+end
+
+cwd = Dir.pwd
+
+if !skip_snailgun? && (socket = snailgun_socket(cwd))
+  log "fruby #{ARGV.inspect}"
+  Snailgun::Client.new(socket)
+else 
+  if rvm_env = rvm_env(cwd)
+    require 'shellwords'
+    args = ARGV.map { |a| Shellwords.shellescape(a) }.join(" ")
+    log "exec:bash -c 'source #{rvm_env}; ruby #{args}'"
+    Kernel.exec('bash', "-c", "source #{rvm_env}; ruby #{args}")
+  else
+    log "exec:ruby #{ARGV.inspect}\""
+    Kernel.exec('ruby', *ARGV)
+  end
+end
