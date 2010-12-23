@@ -16,7 +16,7 @@ class SnailgunPreloader
       already_marked_for_preloading = load_file(@@preload_file)
       unless ignore.include?(path) || already_marked_for_preloading.include?(path)
         puts "adding #{path}"
-        File.open(@@preload_file, "a+") { |f| f.puts path }
+#        File.open(@@preload_file, "a+") { |f| f.puts path }
       end
     end
   end
@@ -34,9 +34,13 @@ module Kernel
       $require_level -= 1 
     end
 
-   if result == true && $require_level == 0
-     SnailgunPreloader.add_to_preload(path)
-   end
+    if result && $require_level == 0
+      $LOG.puts "#{" "*$require_level}#{path}"
+    end
+    
+   # if result == true && $require_level == 0
+   #   SnailgunPreloader.add_to_preload(path)
+   # end
 
 #    if result
 #      puts "R:#{'%.5f' % seconds} #{' '*$require_level}#{path} "  

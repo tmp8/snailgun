@@ -1,7 +1,10 @@
 # Copyright (C) Brian Candler 2009. Released under the Ruby licence.
 
 # Our at_exit handler must be called *last*, so register it first
-at_exit { $SNAILGUN_EXIT.call if $SNAILGUN_EXIT }
+at_exit do
+  $SNAILGUN_EXIT.call if $SNAILGUN_EXIT
+  $LOG.puts "done"
+end
 
 # Fix truncation of $0. See http://blade.nagaokaut.ac.jp/cgi-bin/scat.rb/ruby/ruby-talk/336743
 $progname = $0
@@ -12,6 +15,7 @@ trace_var(:$0) {|val| $PROGRAM_NAME = val} # update for ps
 require 'socket'
 require 'optparse'
 require 'shellwords'
+require 'benchmark'
 
 module Snailgun
   class Server
@@ -27,15 +31,21 @@ module Snailgun
     def run
       while client = @socket.accept
         pid = fork do
+          
+          ActiveRecord::Base.establish_connection
+          
           rubylib = nil
           begin
+            $LOG.puts "forked"
             STDIN.reopen(client.recv_io)
             STDOUT.reopen(client.recv_io)
             STDERR.reopen(client.recv_io)
             nbytes = client.read(4).unpack("N").first
             args, env, cwd, pgid = Marshal.load(client.read(nbytes))
+            $LOG.puts "chdir(#{cwd})"
             Dir.chdir(cwd)
             if rubylib = env['RUBYLIB']
+              $LOG.puts "RUBYLIB=#{rubylib}"
               rubylib.split(/:/).each do |path| 
                 $LOAD_PATH.unshift path
               end
@@ -74,6 +84,8 @@ module Snailgun
 
     # Process the received ruby command line. (TODO: implement more options)
     def start_ruby(args)
+      $LOG.puts "start_ruby=#{args.inspect}"
+      
       e = []
       OptionParser.new do |opts|
         opts.on("-e EXPR") do |v|
@@ -107,26 +119,6 @@ module Snailgun
         $0 = cmd
         load(cmd)
       end
-    end
-    
-    def self.shell
-      shell_opts = ENV['SNAILGUN_SHELL_OPTS']
-      args = shell_opts ? Shellwords.shellwords(shell_opts) : []
-      system(ENV['SHELL'] || 'bash', *args)
-    end
-
-    # Interactive mode (start a subshell with SNAILGUN_SOCK set up,
-    # and terminate the snailgun server when the subshell exits)
-    def interactive!
-      ENV['SNAILGUN_SOCK'] = @sockname
-      pid = Process.fork {
-        STDERR.puts "Snailgun starting on #{sockname} - 'exit' to end"
-        run
-      }
-      self.class.shell
-      Process.kill('TERM',pid)
-      # TODO: wait a few secs for it to die, 'KILL' if required
-      STDERR.puts "Snailgun ended"
     end
   end
 end

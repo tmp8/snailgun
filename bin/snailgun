@@ -3,150 +3,51 @@
 
 # Turn on copy-on-write garbage collection in REE: see
 # http://www.rubyenterpriseedition.com/documentation.html#_copy_on_write_friendliness
+
+$LOG = File.open("/dev/null", "r")
+$LOG.reopen(STDOUT)
+
+
 begin
   GC.copy_on_write_friendly = true
 rescue NoMethodError
 end
 
 $:.unshift File.expand_path(File.join(File.dirname(__FILE__), "..", "lib"))
+require "snailgun/require_timings"
 require 'snailgun/server'
-require 'optparse'
 
-sockpath = nil
-mode = nil
-envs = "test"
-rake = false
-verbose = false
+conf = File.expand_path('config/boot.rb')
+unless File.exist?(conf)
+  raise "#{conf} does not exist, cannot continue"
+end
+sockdir = File.expand_path('tmp/sockets/snailgun')
+begin
+  Dir.mkdir sockdir, 0700
+rescue Errno::EEXIST
+  File.chmod 0700, sockdir
+end
+  
+env = "test"
 
-def fix_rake
-  require 'rbconfig'
-  Config::CONFIG['bindir'] = File.expand_path(File.dirname(__FILE__))
-  Config::CONFIG['ruby_install_name'] = 'fruby'
-  require 'rubygems'
-  require 'rake'
-  require 'rake/testtask'
-  require 'rake/rdoctask'
+ENV['SNAILGUN'] = $$.to_s
+    
+STDERR.puts "Server starting for RAILS_ENV=#{env}"
+server = Snailgun::Server.new("#{sockdir}/#{env}")
+ENV['RAILS_ENV'] = env
+load conf
+
+if File.exist?('./.snailgun.preload')
+  require 'snailgun/require_preload'
+else
+  puts "please create a .snailgun.preload ....."
 end
 
-OptionParser.new do |opts|
-  opts.on("-I DIR", "add to load path")		{ |v| $:.unshift v }
-  opts.on("-r LIB", "require library")		{ |v| require v }
-  opts.on("--rails [ENVS]", "rails mode")	{ |v| mode = :rails; envs = v }
-  opts.on("--ruby [SOCKPATH]", "ruby mode")	{ |v| mode = :ruby; sockpath = v }
-  opts.on("--rake", "add rake support")		{ rake = true }
-  opts.on("-v", "--verbose", "show progress")	{ verbose = true }
-end.parse!
-
-mode ||= if File.exist?("config/boot.rb")
-           :rails
-         elsif File.exist?("config/init.rb")
-           :merb
-         else
-           :ruby
-         end
-
-STDERR.puts "Starting in #{mode} mode" if verbose
-case mode
-when :ruby
-  unless sockpath
-    dir = File.join(ENV['HOME'], '.snailgun')
-    begin
-      Dir.mkdir dir, 0700
-    rescue Errno::EEXIST
-      File.chmod 0700, dir
-    end
-    sockpath = File.join dir, $$.to_s
-  end
-  fix_rake if rake
-  server = Snailgun::Server.new(sockpath)
-  server.interactive!
-
-when :rails
-  conf = File.expand_path('config/boot.rb')
-  unless File.exist?(conf)
-    raise "#{conf} does not exist, cannot continue"
-  end
-  sockdir = File.expand_path('tmp/sockets/snailgun')
-  begin
-    Dir.mkdir sockdir, 0700
-  rescue Errno::EEXIST
-    File.chmod 0700, sockdir
-  end
-  pids = {}
-  fix_rake   # TODO: separate process for rake (but then need to choose right RAILS_ENV)
-  
-  start_for_envs = envs.split(/[\s,]+/).uniq
-  start_for_envs.each do |env|
-    pids[env] = fork do
-      ENV['SNAILGUN'] = $$.to_s
-      
-      STDERR.puts "Server starting for RAILS_ENV=#{env}"
-      server = Snailgun::Server.new("#{sockdir}/#{env}")
-      ENV['RAILS_ENV'] = env
-      load conf
-
-      if File.exist?('./.snailgun.preload')
-        require 'snailgun/require_preload'
-      else
-        puts "please create a .snailgun.preload by ..."
-      end
-
-      if Rails.respond_to?(:configuration) && Rails.configuration.cache_classes
-        STDERR.puts <<-EOS
+if Rails.respond_to?(:configuration) && Rails.configuration.cache_classes
+  STDERR.puts <<-EOS
 WARNING: Snailgun doesn't work well with `cache_classes`. Strongly recommend
 `config.cache_classes = false` in config/environments/#{env}.rb
 EOS
-      end
-      STDERR.puts "Server ready for RAILS_ENV=#{env}"
-      server.run
-    end
-  end
-  if start_for_envs.size == 1
-    ENV['RAILS_ENV'] = start_for_envs.first
-    STDERR.puts "Now entering subshell for RAILS_ENV=#{ENV['RAILS_ENV']}. Use 'exit' to terminate snailgun"
-  else
-    STDERR.puts "Now entering subshell Don't forget to set your RAILS_ENV!. Use 'exit' to terminate snailgun"
-  end
-  Snailgun::Server.shell
-  pids.each do |env,pid|
-    Process.kill('TERM',pid)
-  end
-  # TODO: wait a few secs for them to die, 'KILL' if required
-  STDERR.puts "Snailgun ended"
-
-when :merb
-  conf = File.expand_path('config/init.rb')
-  unless File.exist?(conf)
-    raise '#{conf} does not exist, cannot continue'
-  end
-  sockdir = File.expand_path('tmp/sockets/snailgun')
-  begin
-    require 'fileutils'
-    FileUtils.mkdir_p sockdir
-  ensure
-    File.chmod 0700, sockdir
-  end
-  pids = {}
-  fix_rake   # TODO: separate process for rake (but then need to choose right RAILS_ENV)
-  envs.split(/\s*,\s*/).uniq.each do |env|
-    pids[env] = fork do
-      server = Snailgun::Server.new("#{sockdir}/#{env}")
-      ENV['MERB_ENV'] = env
-
-      require 'rubygems'
-      gem 'merb-core'
-      require 'merb'
-      Merb.start_environment([env])
-
-      STDERR.puts "Started server for #{env}" if verbose
-      server.run
-    end
-  end
-  STDERR.puts "Use 'exit' to terminate snailgun"
-  Snailgun::Server.shell
-  pids.each do |env,pid|
-    Process.kill('TERM',pid)
-  end
-  # TODO: wait a few secs for them to die, 'KILL' if required
-  STDERR.puts "Snailgun ended"
 end
+STDERR.puts "Server ready for RAILS_ENV=#{env}"
+server.run
