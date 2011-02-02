@@ -18,6 +18,27 @@ envs = "test"
 rake = false
 verbose = false
 
+def with_forced_dependency_loading
+  require 'active_support/dependencies'
+  eval <<-EOT
+    module ActiveSupport::Dependencies
+      def load?
+        true
+      end
+    end
+  EOT
+  
+  yield
+ensure
+  eval <<-EOT
+    module ActiveSupport::Dependencies
+      def load?
+        mechanism == :load
+      end
+    end
+  EOT
+end
+
 def fix_rake
   require 'rbconfig'
   Config::CONFIG['bindir'] = File.expand_path(File.dirname(__FILE__))
@@ -63,6 +84,7 @@ when :ruby
 
 when :rails
   conf = File.expand_path('config/boot.rb')
+  
   unless File.exist?(conf)
     raise "#{conf} does not exist, cannot continue"
   end
@@ -85,18 +107,24 @@ when :rails
       ENV['RAILS_ENV'] = env
       load conf
 
-      if File.exist?('./.snailgun.preload')
-        require 'snailgun/require_preload'
-      else
-        puts "please create a .snailgun.preload by ..."
+      with_forced_dependency_loading do
+        if File.exist?('./.snailgun.preload')
+          puts "loading ./.snailgun.preload"
+          require 'snailgun/require_preload'
+        elsif File.exist?('./snailgun_preload.rb')
+          puts "loading ./snailgun_preload.rb"
+          require './snailgun_preload.rb'
+        else
+          puts "please create a .snailgun.preload or a snailgun_preload.rb"
+        end
       end
 
-      if Rails.respond_to?(:configuration) && Rails.configuration.cache_classes
-        STDERR.puts <<-EOS
-WARNING: Snailgun doesn't work well with `cache_classes`. Strongly recommend
-`config.cache_classes = false` in config/environments/#{env}.rb
-EOS
+      ActiveSupport::Dependencies.loaded.each do |file|
+        puts "did autoload '#{file}'"
       end
+      
+      ActiveSupport::Dependencies.clear
+
       STDERR.puts "Server ready for RAILS_ENV=#{env}"
       server.run
     end
@@ -150,3 +178,5 @@ when :merb
   # TODO: wait a few secs for them to die, 'KILL' if required
   STDERR.puts "Snailgun ended"
 end
+
+
